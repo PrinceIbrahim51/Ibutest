@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/release/**',
+      '.vercel/**',
       '**/coverage/**',
       'e2e/output/**',
       'mobile/android/**',

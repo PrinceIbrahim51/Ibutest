@@ -49,3 +49,6 @@ mobile/ios/App/Pods/
 mobile/ios/App/build/
 mobile/ios/DerivedData/
 e2e/output/
+
+# Vercel build output
+.vercel/
