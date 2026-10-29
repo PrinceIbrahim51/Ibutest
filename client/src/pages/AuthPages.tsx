@@ -173,17 +173,20 @@ export function LoginPage() {
 
 export function SetupPage() {
   const { ready, status, completeSession } = useAuth();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', setupToken: '' });
+  // The desktop app passes a one-time setup token in the URL fragment (never sent to servers).
+  const [form, setForm] = useState(() => ({
+    name: '',
+    email: '',
+    password: '',
+    confirm: '',
+    setupToken: /(?:^|[#&])setupToken=([\w-]+)/.exec(window.location.hash)?.[1] ?? '',
+  }));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    // The desktop app passes a one-time setup token in the URL fragment (never sent to servers).
-    const m = /(?:^|[#&])setupToken=([\w-]+)/.exec(window.location.hash);
-    if (m?.[1]) {
-      setForm((f) => ({ ...f, setupToken: m[1]! }));
-      history.replaceState(null, '', window.location.pathname);
-    }
+    // Remove the token from the address bar / history once it has been read.
+    if (window.location.hash.includes('setupToken=')) history.replaceState(null, '', window.location.pathname);
   }, []);
 
   if (!ready) return <Loading />;

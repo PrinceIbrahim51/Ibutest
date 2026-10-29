@@ -28,8 +28,7 @@ interface TipState {
   content: ReactNode;
 }
 
-function useTooltip() {
-  const ref = useRef<HTMLDivElement>(null);
+function useTooltip(ref: RefObject<HTMLDivElement | null>) {
   const [tip, setTip] = useState<TipState | null>(null);
   const showAt = (clientX: number, clientY: number, content: ReactNode) => {
     const box = ref.current?.getBoundingClientRect();
@@ -46,7 +45,7 @@ function useTooltip() {
       {tip.content}
     </div>
   ) : null;
-  return { ref, fromPointer, fromElement, hide: () => setTip(null), node };
+  return { fromPointer, fromElement, hide: () => setTip(null), node };
 }
 
 function TipRow({ status, value }: { status: RunStatus; value: number }) {
@@ -61,12 +60,13 @@ function TipRow({ status, value }: { status: RunStatus; value: number }) {
 
 /** Horizontal stacked bar of run outcomes (status job: fixed status colours + icon/label legend). */
 export function StatusStackBar({ counts, large }: { counts: RunCounts | null; large?: boolean }) {
-  const tip = useTooltip();
+  const ref = useRef<HTMLDivElement>(null);
+  const tip = useTooltip(ref);
   const total = counts?.total ?? 0;
   if (!counts || total === 0) return <div className={`stackbar${large ? ' lg' : ''}`}><span className="seg bg-not_run" style={{ width: '100%' }} /></div>;
   const segments = STATUS_ORDER.filter((s) => counts[s] > 0);
   return (
-    <div className="chart" ref={tip.ref} onPointerLeave={tip.hide}>
+    <div className="chart" ref={ref} onPointerLeave={tip.hide}>
       <div className={`stackbar${large ? ' lg' : ''}`} role="img" aria-label={segments.map((s) => `${RUN_STATUS_META[s].text} ${counts[s]}`).join(', ')}>
         {segments.map((s) => {
           const content = (
@@ -120,7 +120,8 @@ const compact = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0
 
 /** Stacked daily executions for the last N days, with hover/focus tooltip and a table view. */
 export function ExecutionTrend({ rows, days = 14 }: { rows: { day: string; status: RunStatus; n: number }[]; days?: number }) {
-  const tip = useTooltip();
+  const ref = useRef<HTMLDivElement>(null);
+  const tip = useTooltip(ref);
   const [showTable, setShowTable] = useState(false);
   const series: RunStatus[] = ['passed', 'failed', 'blocked', 'skipped', 'in_progress'];
   const data = useMemo(() => {
@@ -138,7 +139,7 @@ export function ExecutionTrend({ rows, days = 14 }: { rows: { day: string; statu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, days]);
 
-  const W = useWidth(tip.ref);
+  const W = useWidth(ref);
   const H = 220;
   const pad = { l: 32, r: 8, t: 8, b: 24 };
   const plotW = W - pad.l - pad.r;
@@ -152,7 +153,7 @@ export function ExecutionTrend({ rows, days = 14 }: { rows: { day: string; statu
 
   return (
     <div className="stack tight">
-      <div className="chart" ref={tip.ref} onPointerLeave={tip.hide}>
+      <div className="chart" ref={ref} onPointerLeave={tip.hide}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Test executions per day over the last ${days} days`}>
           {ticks.map((t) => (
             <g key={t}>

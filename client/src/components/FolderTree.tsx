@@ -34,7 +34,7 @@ export function FolderSelect({ projectId, kind, value, onChange, id }: { project
     const out: { id: string; label: string }[] = [];
     const walk = (nodes: Node[], depth: number) => {
       for (const n of [...nodes].sort((a, b) => a.name.localeCompare(b.name))) {
-        out.push({ id: n.id, label: `${' '.repeat(depth)}${n.name}` });
+        out.push({ id: n.id, label: `${'\u2003'.repeat(depth)}${n.name}` });
         walk(n.children, depth + 1);
       }
     };

@@ -175,7 +175,7 @@ describe('input handling', () => {
     const res = await t.request
       .post(`/api/projects/${projectId}/requirements`)
       .set(bearer(admin.token))
-      .send({ title: 'Pay\u0000ment ‮gnp.exe‬ flow' })
+      .send({ title: 'Pay\u0000ment \u202Egnp.exe\u202C flow' })
       .expect(201);
     expect(res.body.requirement.title).toBe('Payment gnp.exe flow');
   });

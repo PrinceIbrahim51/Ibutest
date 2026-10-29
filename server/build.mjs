@@ -7,7 +7,7 @@ const EXTERNAL = ['@node-rs/argon2', '@electric-sql/pglite', 'pg-native'];
 
 fs.rmSync(new URL('./dist', import.meta.url), { recursive: true, force: true });
 await build({
-  entryPoints: { index: 'src/index.ts', embedded: 'src/embedded.ts' },
+  entryPoints: { index: 'src/index.ts', embedded: 'src/embedded.ts', 'create-admin': 'src/scripts/create-admin.ts' },
   outdir: 'dist',
   bundle: true,
   splitting: true,

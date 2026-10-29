@@ -28,7 +28,7 @@ function sendCsv(res: Response, filename: string, headers: string[], rows: unkno
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/[^\w.-]/g, '_')}"`);
   // UTF-8 BOM so spreadsheet tools detect the encoding.
-  res.send(`﻿${toCsv(headers, rows)}`);
+  res.send(`\uFEFF${toCsv(headers, rows)}`);
 }
 
 export function reportsRouter(ctx: AppContext) {

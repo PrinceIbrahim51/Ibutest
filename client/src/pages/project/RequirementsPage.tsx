@@ -9,7 +9,7 @@ import {
 } from '@ibutest/shared';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Download, FileText, Link2, Plus, Sparkles, Trash2, Unlink } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api, downloadFile } from '../../api/client';
 import { AiGenerateModal } from '../../components/AiGenerate';
@@ -231,31 +231,41 @@ interface RequirementDetail {
 }
 
 export function RequirementDetailPage() {
+  const { project } = useProject();
+  const { requirementId = '' } = useParams();
+  const query = useQuery({
+    queryKey: ['requirement', project.id, requirementId],
+    queryFn: () => api<RequirementDetail>(`/projects/${project.id}/requirements/${requirementId}`),
+  });
+  if (!query.data) return query.error ? <ErrorAlert error={query.error} /> : <Loading />;
+  // Re-keying on updatedAt resets the form whenever the server copy changes.
+  return <RequirementDetailView key={query.data.requirement.updatedAt} detail={query.data} />;
+}
+
+function RequirementDetailView({ detail }: { detail: RequirementDetail }) {
   const { project, can } = useProject();
   const { status: authStatus } = useAuth();
-  const { requirementId = '' } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const run = useAction();
   const { confirm, toast } = useFeedback();
-  const [form, setForm] = useState<RequirementForm | null>(null);
+  const r = detail.requirement;
+  const [form, setForm] = useState<RequirementForm>(() => ({
+    title: r.title,
+    description: r.description,
+    priority: r.priority,
+    status: r.status,
+    type: r.type,
+    folderId: r.folderId,
+    externalRef: r.externalRef,
+  }));
   const [linking, setLinking] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const key = ['requirement', project.id, requirementId];
-  const query = useQuery({ queryKey: key, queryFn: () => api<RequirementDetail>(`/projects/${project.id}/requirements/${requirementId}`) });
-  useEffect(() => {
-    if (query.data) {
-      const r = query.data.requirement;
-      setForm({ title: r.title, description: r.description, priority: r.priority, status: r.status, type: r.type, folderId: r.folderId, externalRef: r.externalRef });
-    }
-  }, [query.data]);
+  const key = ['requirement', project.id, r.id];
   const reload = () => {
     void queryClient.invalidateQueries({ queryKey: key });
     void queryClient.invalidateQueries({ queryKey: ['requirements', project.id] });
   };
-
-  if (query.isLoading || !form) return query.error ? <ErrorAlert error={query.error} /> : <Loading />;
-  const r = query.data!.requirement;
   const editable = can('tester');
 
   return (
@@ -317,17 +327,17 @@ export function RequirementDetailPage() {
         <div className="stack">
           <div className="card stack tight">
             <div className="row between">
-              <span className="section-title">Linked test cases ({query.data!.testCases.length})</span>
+              <span className="section-title">Linked test cases ({detail.testCases.length})</span>
               {editable && (
                 <button type="button" className="btn sm" onClick={() => setLinking(true)}>
                   <Link2 size={14} /> Link
                 </button>
               )}
             </div>
-            {query.data!.testCases.length === 0 ? (
+            {detail.testCases.length === 0 ? (
               <p className="small muted">Not covered by any test case yet.</p>
             ) : (
-              query.data!.testCases.map((t) => (
+              detail.testCases.map((t) => (
                 <div key={t.id} className="row">
                   <KeyBadge value={t.key} />
                   <Link to={`/p/${project.id}/test-cases/${t.id}`} className="grow truncate" title={t.title}>
@@ -355,7 +365,7 @@ export function RequirementDetailPage() {
           projectId={project.id}
           title={`Link test cases to ${r.key}`}
           confirmText="Link selected"
-          exclude={query.data!.testCases.map((t) => t.id)}
+          exclude={detail.testCases.map((t) => t.id)}
           onClose={() => setLinking(false)}
           onPick={async (ids) => {
             if ((await run(() => api(`/projects/${project.id}/requirements/${r.id}/links`, { method: 'POST', body: { testCaseIds: ids } }), 'Linked')) !== undefined) {

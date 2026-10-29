@@ -1,0 +1,17 @@
+# gitleaks configuration (used by .github/workflows/security.yml).
+title = "IbuTest gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented placeholders and test-only fixtures"
+paths = [
+  '''\.env\.example$''',
+  '''package-lock\.json$''',
+]
+regexes = [
+  '''REPLACE_ME''',
+  '''test-only-jwt-secret''',
+  '''ci-only-password''',
+]

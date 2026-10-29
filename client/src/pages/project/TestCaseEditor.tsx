@@ -11,7 +11,7 @@ import {
 } from '@ibutest/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Copy, History, Plus, Sparkles, Trash2 } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api, errorMessage } from '../../api/client';
 import { useAuth } from '../../auth/AuthProvider';
@@ -206,19 +206,37 @@ function AiReviewCard({ review, onClose }: { review: AiReview; onClose: () => vo
   );
 }
 
+function formFrom(detail: TestCaseDetail): CaseForm {
+  const t = detail.testCase;
+  return {
+    title: t.title,
+    description: t.description,
+    preconditions: t.preconditions,
+    priority: t.priority,
+    status: t.status,
+    type: t.type,
+    folderId: t.folderId,
+    automationKey: t.automationKey ?? '',
+    isAutomated: t.isAutomated,
+    estimatedMinutes: t.estimatedMinutes === null ? '' : String(t.estimatedMinutes),
+    tags: t.tags.join(', '),
+    steps: detail.steps.map((s) => ({ action: s.action, expected: s.expected, testData: s.testData })),
+  };
+}
+
 export function TestCaseEditorPage() {
-  const { project, can } = useProject();
-  const { status: authStatus } = useAuth();
+  const { project } = useProject();
   const { testCaseId } = useParams();
   const [searchParams] = useSearchParams();
-  const isNew = !testCaseId;
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const run = useAction();
-  const { confirm } = useFeedback();
-  const [form, setForm] = useState<CaseForm | null>(
-    isNew
-      ? {
+  const query = useQuery({
+    queryKey: ['testCase', project.id, testCaseId],
+    enabled: !!testCaseId,
+    queryFn: () => api<TestCaseDetail>(`/projects/${project.id}/test-cases/${testCaseId}`),
+  });
+  if (!testCaseId) {
+    return (
+      <TestCaseEditor
+        initial={{
           title: '',
           description: '',
           preconditions: '',
@@ -231,46 +249,35 @@ export function TestCaseEditorPage() {
           estimatedMinutes: '',
           tags: '',
           steps: [blankStep()],
-        }
-      : null,
-  );
+        }}
+      />
+    );
+  }
+  if (!query.data) return query.error ? <ErrorAlert error={query.error} /> : <Loading />;
+  // Re-keying on updatedAt resets the form whenever the server copy changes.
+  return <TestCaseEditor key={query.data.testCase.updatedAt} detail={query.data} initial={formFrom(query.data)} />;
+}
+
+function TestCaseEditor({ detail, initial }: { detail?: TestCaseDetail; initial: CaseForm }) {
+  const { project, can } = useProject();
+  const { status: authStatus } = useAuth();
+  const isNew = !detail;
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const run = useAction();
+  const { confirm } = useFeedback();
+  const [form, setForm] = useState<CaseForm>(initial);
   const [error, setError] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState(false);
   const [review, setReview] = useState<AiReview | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const tc = detail?.testCase;
+  const testCaseId = tc?.id;
   const key = ['testCase', project.id, testCaseId];
-  const query = useQuery({
-    queryKey: key,
-    enabled: !isNew,
-    queryFn: () => api<TestCaseDetail>(`/projects/${project.id}/test-cases/${testCaseId}`),
-  });
-  useEffect(() => {
-    if (!query.data) return;
-    const t = query.data.testCase;
-    setForm({
-      title: t.title,
-      description: t.description,
-      preconditions: t.preconditions,
-      priority: t.priority,
-      status: t.status,
-      type: t.type,
-      folderId: t.folderId,
-      automationKey: t.automationKey ?? '',
-      isAutomated: t.isAutomated,
-      estimatedMinutes: t.estimatedMinutes === null ? '' : String(t.estimatedMinutes),
-      tags: t.tags.join(', '),
-      steps: query.data.steps.map((s) => ({ action: s.action, expected: s.expected, testData: s.testData })),
-    });
-  }, [query.data]);
-
-  if (!isNew && (query.isLoading || !form)) return query.error ? <ErrorAlert error={query.error} /> : <Loading />;
-  if (!form) return <Loading />;
-  const tc = query.data?.testCase;
   const editable = can('tester');
 
   async function save(e: FormEvent) {
     e.preventDefault();
-    if (!form) return;
     setError(null);
     try {
       if (isNew) {
@@ -294,7 +301,7 @@ export function TestCaseEditorPage() {
     if (res) setReview(res.review);
   }
 
-  const set = <K extends keyof CaseForm>(k: K, v: CaseForm[K]) => setForm((f) => (f ? { ...f, [k]: v } : f));
+  const set = <K extends keyof CaseForm>(k: K, v: CaseForm[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
     <>
@@ -454,14 +461,14 @@ export function TestCaseEditorPage() {
             </div>
           )}
         </form>
-        {tc && query.data && (
+        {tc && detail && (
           <div className="stack">
             <div className="card stack tight">
               <span className="section-title">Requirements</span>
-              {query.data.requirements.length === 0 ? (
+              {detail.requirements.length === 0 ? (
                 <p className="small muted">Not linked to a requirement.</p>
               ) : (
-                query.data.requirements.map((r) => (
+                detail.requirements.map((r) => (
                   <div key={r.id} className="row">
                     <KeyBadge value={r.key} />
                     <Link to={`/p/${project.id}/requirements/${r.id}`} className="truncate grow">
@@ -474,10 +481,10 @@ export function TestCaseEditorPage() {
             </div>
             <div className="card stack tight">
               <span className="section-title">Recent runs</span>
-              {query.data.recentRuns.length === 0 ? (
+              {detail.recentRuns.length === 0 ? (
                 <p className="small muted">Never executed.</p>
               ) : (
-                query.data.recentRuns.map((r) => (
+                detail.recentRuns.map((r) => (
                   <div key={r.id} className="row">
                     <Link to={`/p/${project.id}/runs/${r.id}`} className="truncate grow">
                       {r.cycleName}

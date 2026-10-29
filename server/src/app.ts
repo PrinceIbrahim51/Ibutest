@@ -79,6 +79,7 @@ export function createApp(ctx: AppContext) {
 
   // ------------------------------------------------------------------ Web client (SPA)
   const clientDir = config.clientDistDir ? path.resolve(config.clientDistDir) : null;
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from server config
   if (clientDir && fs.existsSync(path.join(clientDir, 'index.html'))) {
     const indexHtml = path.join(clientDir, 'index.html');
     app.use(

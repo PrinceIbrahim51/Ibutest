@@ -124,7 +124,10 @@ export function attachmentsRouter(ctx: AppContext, limiters: RateLimiters) {
 
     const storedName = randomUUID();
     const { dir, full } = fileOnDisk(p.id, storedName);
+    // Paths are UPLOAD_DIR/<project uuid>/<random uuid>, checked by fileOnDisk().
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.mkdir(dir, { recursive: true, mode: 0o700 });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.writeFile(full, req.file.buffer, { mode: 0o600, flag: 'wx' });
     const [row] = await ctx.db
       .insert(attachments)
@@ -152,6 +155,7 @@ export function attachmentsRouter(ctx: AppContext, limiters: RateLimiters) {
     const p = projectOf(req);
     const row = await load(p.id, uuidParam(req, 'attachmentId', 'Attachment'));
     const { full } = fileOnDisk(p.id, row.storedName);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- server-generated path, see fileOnDisk()
     const data = await fs.readFile(full).catch(() => {
       throw notFound('Attachment');
     });

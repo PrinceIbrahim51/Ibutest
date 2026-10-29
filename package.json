@@ -33,7 +33,9 @@
     "audit:security": "node scripts/security-audit.mjs",
     "desktop:dev": "npm run dev -w @ibutest/desktop",
     "desktop:dist": "npm run build && npm run dist -w @ibutest/desktop",
-    "mobile:sync": "npm run build -w @ibutest/client && npm run sync -w @ibutest/mobile"
+    "mobile:sync": "npm run build -w @ibutest/client && npm run sync -w @ibutest/mobile",
+    "test:e2e": "node e2e/web-smoke.mjs",
+    "test:e2e:desktop": "node e2e/desktop-smoke.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -41,6 +43,7 @@
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-security": "4.2.0",
     "globals": "17.13.0",
+    "playwright": "1.64.1",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1"
   },

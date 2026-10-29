@@ -18,7 +18,7 @@ import {
   Sun,
   User,
 } from 'lucide-react';
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, type ReactNode, useContext, useState } from 'react';
 import { NavLink, Outlet, useLocation, useParams } from 'react-router';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthProvider';
@@ -144,8 +144,10 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const { user, logout } = useAuth();
   const { projectId } = useParams();
   const location = useLocation();
-  const [open, setOpen] = useState(false);
-  useEffect(() => setOpen(false), [location.pathname]);
+  // The drawer is open only for the page it was opened on, so navigating closes it.
+  const [openAt, setOpenAt] = useState<string | null>(null);
+  const open = openAt === location.pathname;
+  const setOpen = (value: boolean) => setOpenAt(value ? location.pathname : null);
   const desktop = desktopBridge();
 
   return (

@@ -22,7 +22,6 @@ export function apiNotFound(_req: Request, _res: Response, next: NextFunction) {
  * stack traces, SQL and internal details are logged server-side with the request id.
  */
 export function errorHandler(logger: Logger) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return (err: unknown, req: Request, res: Response, _next: NextFunction) => {
     const requestId = String(req.id ?? '');
     const send = (status: number, code: string, message: string, details?: unknown) =>

@@ -1,0 +1,53 @@
+# Production-style deployment: PostgreSQL + IbuTest behind your TLS reverse proxy.
+#   1. npm run setup:env  (or create .env from .env.example with strong secrets)
+#   2. set POSTGRES_PASSWORD, DATABASE_URL, PUBLIC_URL and SETUP_TOKEN in .env
+#   3. docker compose up -d --build
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ibutest
+      POSTGRES_USER: ibutest
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks: [backend]
+    # The database is only reachable from the internal network - no published port.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ibutest -d ibutest']
+      interval: 10s
+      retries: 5
+    security_opt: ['no-new-privileges:true']
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DB_DRIVER: postgres
+      HOST: 0.0.0.0
+      TRUST_PROXY: '1'
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/data
+    networks: [backend, frontend]
+    # Publish on loopback only; put a TLS-terminating reverse proxy (Caddy/nginx) in front.
+    ports:
+      - '127.0.0.1:4000:4000'
+    read_only: true
+    tmpfs: ['/tmp']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+
+volumes:
+  db-data:
+  uploads:
+
+networks:
+  backend:
+    internal: true
+  frontend:

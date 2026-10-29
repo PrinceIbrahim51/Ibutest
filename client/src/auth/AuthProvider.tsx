@@ -18,6 +18,24 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+interface AuthLoadResult {
+  status: AuthStatus | null;
+  user: User | null;
+  failed: boolean;
+}
+
+/** Reads server status and restores the session from the refresh cookie (no React state here). */
+async function loadAuthState(): Promise<AuthLoadResult> {
+  try {
+    const status = await api<AuthStatus>('/auth/status');
+    if (status.setupRequired) return { status, user: null, failed: false };
+    const session = await refreshSession();
+    return { status, user: session?.user ?? null, failed: false };
+  } catch {
+    return { status: null, user: null, failed: true };
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [ready, setReady] = useState(false);
@@ -25,25 +43,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [statusError, setStatusError] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
-  const reloadStatus = useCallback(async () => {
-    setReady(false);
-    try {
-      const s = await api<AuthStatus>('/auth/status');
-      setStatus(s);
-      setStatusError(false);
-      if (!s.setupRequired) {
-        const session = await refreshSession();
-        setUser(session?.user ?? null);
-      }
-    } catch {
-      setStatusError(true);
-    } finally {
-      setReady(true);
+  const applyAuthState = useCallback((result: AuthLoadResult) => {
+    setStatusError(result.failed);
+    if (!result.failed) {
+      setStatus(result.status);
+      setUser(result.user);
     }
+    setReady(true);
   }, []);
 
+  const reloadStatus = useCallback(async () => {
+    setReady(false);
+    applyAuthState(await loadAuthState());
+  }, [applyAuthState]);
+
   useEffect(() => {
-    void reloadStatus();
+    void loadAuthState().then(applyAuthState);
     return onSessionChange((session) => {
       if (session) setUser(session.user);
       else {
@@ -51,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.clear();
       }
     });
-  }, [reloadStatus, queryClient]);
+  }, [applyAuthState, queryClient]);
 
   const completeSession = useCallback((session: SessionResponse) => {
     setSession(session);

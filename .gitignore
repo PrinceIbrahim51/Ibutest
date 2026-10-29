@@ -4,6 +4,8 @@ node_modules/
 # Build output
 dist/
 build/
+# electron-builder resources (icons, entitlements) are source files
+!desktop/build/
 out/
 release/
 *.tsbuildinfo
@@ -46,3 +48,4 @@ mobile/android/local.properties
 mobile/ios/App/Pods/
 mobile/ios/App/build/
 mobile/ios/DerivedData/
+e2e/output/

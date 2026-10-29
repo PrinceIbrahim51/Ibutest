@@ -10,11 +10,12 @@ export function displayKey(prefix: string, seq: number): string {
   return `${prefix}-${seq}`;
 }
 
+const KEY_SEARCH = /^([A-Z]{2})-(\d{1,9})$/i;
+
 /** Parses "TC-12" style search input into a sequence number for exact-key lookups. */
 export function parseKeySearch(search: string | undefined, prefix: string): number | null {
-  if (!search) return null;
-  const m = new RegExp(`^${prefix}-(\\d{1,9})$`, 'i').exec(search.trim());
-  return m ? Number(m[1]) : null;
+  const m = search ? KEY_SEARCH.exec(search.trim()) : null;
+  return m && m[1]!.toUpperCase() === prefix ? Number(m[2]) : null;
 }
 
 type SeqColumn = 'requirementSeq' | 'testCaseSeq' | 'defectSeq';

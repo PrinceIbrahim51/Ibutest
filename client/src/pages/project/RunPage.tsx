@@ -25,18 +25,26 @@ function deriveStatus(statuses: StepStatus[]): ExecutionStatus {
 }
 
 export function RunPage() {
+  const { project } = useProject();
+  const { runId = '' } = useParams();
+  const query = useQuery({ queryKey: ['run', project.id, runId], queryFn: () => api<RunDetail>(`/projects/${project.id}/runs/${runId}`) });
+  if (!query.data) return query.error ? <ErrorAlert error={query.error} /> : <Loading />;
+  // A fresh execution form per run (and after the test case's steps change).
+  return <RunExecution key={`${query.data.run.id}:${query.data.steps.length}`} detail={query.data} />;
+}
+
+function RunExecution({ detail: d }: { detail: RunDetail }) {
   const { project, can } = useProject();
   const { status: authStatus } = useAuth();
-  const { runId = '' } = useParams();
   const queryClient = useQueryClient();
   const run = useAction();
   const { toast } = useFeedback();
+  const runId = d.run.id;
   const key = ['run', project.id, runId];
-  const query = useQuery({ queryKey: key, queryFn: () => api<RunDetail>(`/projects/${project.id}/runs/${runId}`) });
-  const [results, setResults] = useState<{ status: StepStatus; actual: string }[]>([]);
+  const [results, setResults] = useState<{ status: StepStatus; actual: string }[]>(() => d.steps.map(() => ({ status: 'not_run', actual: '' })));
   const [overall, setOverall] = useState<ExecutionStatus | null>(null);
   const [comment, setComment] = useState('');
-  const [startedAt, setStartedAt] = useState(() => Date.now());
+  const [startedAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,22 +53,11 @@ export function RunPage() {
   const [openLog, setOpenLog] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!query.data) return;
-    setResults(query.data.steps.map(() => ({ status: 'not_run', actual: '' })));
-    setOverall(null);
-    setComment('');
-    setStartedAt(Date.now());
-  }, [query.data?.run.id, query.data?.steps.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
   const suggested = useMemo(() => deriveStatus(results.map((r) => r.status)), [results]);
-  if (query.isLoading) return <Loading />;
-  if (!query.data) return <ErrorAlert error={query.error} />;
-  const d = query.data;
   const closed = d.cycle.status === 'closed';
   const canExecute = can('tester') && !closed;
   const finalStatus = overall ?? suggested;

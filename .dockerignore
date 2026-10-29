@@ -1,0 +1,18 @@
+# Never send secrets, VCS metadata or local data into the image build context.
+.env
+.env.*
+!.env.example
+.git
+.github
+**/node_modules
+**/dist
+**/release
+**/coverage
+data
+**/data
+uploads
+desktop
+mobile
+*.log
+*.pem
+*.key

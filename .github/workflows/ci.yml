@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+jobs:
+  quality:
+    name: Lint, typecheck, build & security audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the secret scan
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm audit signatures
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run audit:security
+
+  test:
+    name: Tests (${{ matrix.db }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [pglite, postgres]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ibutest_test
+          POSTGRES_PASSWORD: ci-only-password # secret-scan:allow (ephemeral CI service container)
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ibutest_test" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Run test suite
+        run: npm test
+        env:
+          TEST_DATABASE_URL: ${{ matrix.db == 'postgres' && 'postgres://ibutest_test:ci-only-password@localhost:5432/postgres' || '' }} # secret-scan:allow
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t ibutest:ci .
+      - name: Smoke test container (non-root, health endpoint, no exposed dotfiles)
+        run: |
+          docker run -d --name ibutest -p 4000:4000 \
+            -e JWT_SECRET="$(openssl rand -base64 48)" \
+            -e ENCRYPTION_KEY="$(openssl rand -base64 32)" \
+            -e DB_DRIVER=pglite ibutest:ci
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4000/api/health && break; sleep 2; done
+          test "$(docker exec ibutest id -u)" != "0"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4000/.env)" = "404"
+          curl -sI http://127.0.0.1:4000/ | grep -i "content-security-policy"
+          docker logs ibutest | tail -5
+
+  e2e:
+    name: End-to-end (browser + desktop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies (with the Electron binary)
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '0'
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build && npm run build -w @ibutest/desktop
+      - name: Start production server (fresh embedded database)
+        run: |
+          export NODE_ENV=production CLIENT_DIST_DIR=client/dist \
+            PGLITE_DATA_DIR="$RUNNER_TEMP/db" UPLOAD_DIR="$RUNNER_TEMP/uploads" \
+            SETUP_TOKEN=e2e-setup-token-0123456789 \
+            JWT_SECRET="$(openssl rand -base64 48)" ENCRYPTION_KEY="$(openssl rand -base64 32)"
+          nohup node server/dist/index.js > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4000/api/health && break; sleep 1; done
+      - name: Browser end-to-end
+        run: npm run test:e2e
+      - name: Desktop end-to-end
+        run: xvfb-run -a npm run test:e2e:desktop
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-output
+          path: |
+            e2e/output
+            ${{ runner.temp }}/server.log

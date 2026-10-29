@@ -33,6 +33,7 @@ export async function openDatabase(config: Config): Promise<DatabaseHandle> {
         ? false
         : {
             rejectUnauthorized: config.db.ssl === 'verify-full',
+            // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from server config
             ca: config.db.sslCaFile ? fs.readFileSync(config.db.sslCaFile, 'utf8') : undefined,
           };
     const pool = new pg.Pool({
@@ -58,6 +59,7 @@ export async function openDatabase(config: Config): Promise<DatabaseHandle> {
   const { drizzle } = await import('drizzle-orm/pglite');
   const { migrate } = await import('drizzle-orm/pglite/migrator');
   const dataDir = config.db.pgliteDataDir;
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from server config
   if (!dataDir.startsWith('memory://')) fs.mkdirSync(path.resolve(dataDir), { recursive: true, mode: 0o700 });
   const client = new PGlite(dataDir.startsWith('memory://') ? dataDir : path.resolve(dataDir));
   await client.waitReady;

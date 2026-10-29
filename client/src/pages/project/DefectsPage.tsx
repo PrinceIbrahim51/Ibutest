@@ -10,7 +10,7 @@ import {
 } from '@ibutest/shared';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Bug, Download, Plus, Trash2 } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api, downloadFile, errorMessage } from '../../api/client';
 import { Attachments } from '../../components/Attachments';
@@ -300,34 +300,36 @@ export function DefectsPage() {
 }
 
 export function DefectDetailPage() {
-  const { project, can } = useProject();
+  const { project } = useProject();
   const { defectId = '' } = useParams();
+  const query = useQuery({
+    queryKey: ['defect', project.id, defectId],
+    queryFn: () => api<{ defect: Defect }>(`/projects/${project.id}/defects/${defectId}`).then((r) => r.defect),
+  });
+  if (!query.data) return query.error ? <ErrorAlert error={query.error} /> : <Loading />;
+  return <DefectDetailView key={query.data.updatedAt} defect={query.data} />;
+}
+
+function DefectDetailView({ defect: d }: { defect: Defect }) {
+  const { project, can } = useProject();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const run = useAction();
   const { confirm } = useFeedback();
-  const key = ['defect', project.id, defectId];
-  const query = useQuery({ queryKey: key, queryFn: () => api<{ defect: Defect }>(`/projects/${project.id}/defects/${defectId}`).then((r) => r.defect) });
-  const [form, setForm] = useState<DefectForm | null>(null);
-  useEffect(() => {
-    const d = query.data;
-    if (d)
-      setForm({
-        title: d.title,
-        description: d.description,
-        stepsToReproduce: d.stepsToReproduce,
-        expectedResult: d.expectedResult,
-        actualResult: d.actualResult,
-        severity: d.severity,
-        priority: d.priority,
-        status: d.status,
-        assigneeId: d.assigneeId,
-        environment: d.environment,
-        externalRef: d.externalRef,
-      });
-  }, [query.data]);
-  if (query.isLoading || !form) return query.error ? <ErrorAlert error={query.error} /> : <Loading />;
-  const d = query.data!;
+  const key = ['defect', project.id, d.id];
+  const [form, setForm] = useState<DefectForm>(() => ({
+    title: d.title,
+    description: d.description,
+    stepsToReproduce: d.stepsToReproduce,
+    expectedResult: d.expectedResult,
+    actualResult: d.actualResult,
+    severity: d.severity,
+    priority: d.priority,
+    status: d.status,
+    assigneeId: d.assigneeId,
+    environment: d.environment,
+    externalRef: d.externalRef,
+  }));
   const editable = can('tester');
   return (
     <>
