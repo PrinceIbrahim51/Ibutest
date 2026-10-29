@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">IbuTest</string>
+    <string name="title_activity_main">IbuTest</string>
+    <string name="package_name">com.ibutest.app</string>
+    <string name="custom_url_scheme">com.ibutest.app</string>
+</resources>

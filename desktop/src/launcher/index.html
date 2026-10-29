@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
+    <title>IbuTest</title>
+    <link rel="stylesheet" href="launcher.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="brand">
+        <img src="icon.svg" alt="" width="40" height="40" />
+        <div>
+          <h1>IbuTest</h1>
+          <p class="muted">Choose where your test management workspace lives.</p>
+        </div>
+      </header>
+      <p id="error" class="error" role="alert" hidden></p>
+      <section class="card">
+        <h2>Connect to your team's server</h2>
+        <p class="muted">Recommended for teams. Everyone shares the same projects, and your administrator manages security.</p>
+        <form id="remote-form">
+          <label for="server-url">Server address</label>
+          <div class="row">
+            <input id="server-url" type="url" placeholder="https://ibutest.example.com" required autocomplete="url" spellcheck="false" />
+            <button type="submit" class="primary">Connect</button>
+          </div>
+          <p class="hint">Only secure https:// connections are allowed.</p>
+        </form>
+      </section>
+      <section class="card">
+        <h2>Use on this computer only</h2>
+        <p class="muted">A private workspace stored in your user profile. Works offline; nothing leaves this machine except optional AI requests.</p>
+        <form id="local-form">
+          <label for="ai-key">Anthropic API key for AI features <span class="muted">(optional)</span></label>
+          <input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="Leave empty to keep the current setting" />
+          <p class="hint">Stored encrypted with your operating system's keychain.</p>
+          <button type="submit">Open local workspace</button>
+        </form>
+      </section>
+      <footer class="muted small" id="version"></footer>
+    </main>
+    <script src="launcher.js"></script>
+  </body>
+</html>
