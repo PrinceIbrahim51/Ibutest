@@ -1,0 +1,22 @@
+{
+  "name": "@ibutest/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "IbuTest mobile apps (Capacitor for iOS and Android)",
+  "scripts": {
+    "sync": "cap sync",
+    "add:android": "cap add android",
+    "add:ios": "cap add ios",
+    "open:android": "cap open android",
+    "open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

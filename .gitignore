@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+release/
+*.tsbuildinfo
+coverage/
+
+# Secrets - NEVER commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.mobileprovision
+secrets.json
+
+# Local data (embedded database, uploads)
+data/
+uploads/
+server/data/
+server/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Mobile native build output
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/ios/App/Pods/
+mobile/ios/App/build/
+mobile/ios/DerivedData/

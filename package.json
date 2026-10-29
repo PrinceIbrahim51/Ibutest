@@ -1,0 +1,52 @@
+{
+  "name": "ibutest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IbuTest - secure, AI-assisted test case and test management platform (web, desktop, mobile)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "shared",
+    "server",
+    "client",
+    "desktop",
+    "mobile"
+  ],
+  "scripts": {
+    "setup:env": "node scripts/generate-env.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "npm run dev -w @ibutest/server",
+    "dev:client": "npm run dev -w @ibutest/client",
+    "build": "npm run build -w @ibutest/client && npm run build -w @ibutest/server",
+    "start": "npm run start -w @ibutest/server",
+    "db:migrate": "npm run db:migrate -w @ibutest/server",
+    "db:generate": "npm run db:generate -w @ibutest/server",
+    "create-admin": "npm run create-admin -w @ibutest/server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "test": "npm run test -w @ibutest/server",
+    "audit:deps": "npm audit --audit-level=moderate",
+    "audit:secrets": "node scripts/scan-secrets.mjs",
+    "audit:security": "node scripts/security-audit.mjs",
+    "desktop:dev": "npm run dev -w @ibutest/desktop",
+    "desktop:dist": "npm run build && npm run dist -w @ibutest/desktop",
+    "mobile:sync": "npm run build -w @ibutest/client && npm run sync -w @ibutest/mobile"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-security": "4.2.0",
+    "globals": "17.13.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.28.2"
+    }
+  }
+}
