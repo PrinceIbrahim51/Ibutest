@@ -41,7 +41,7 @@ export function securityHeaders(config: Config): RequestHandler[] {
     (_req: Request, res: Response, next: NextFunction) => {
       res.setHeader(
         'Permissions-Policy',
-        'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), interest-cohort=()',
+        'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), display-capture=()',
       );
       next();
     },

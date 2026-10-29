@@ -1,0 +1,97 @@
+import type { AuthStatus, LoginResponse, SessionResponse, User } from '@ibutest/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { api, onSessionChange, refreshSession, setSession } from '../api/client';
+
+interface AuthState {
+  ready: boolean;
+  status: AuthStatus | null;
+  statusError: boolean;
+  user: User | null;
+  login(email: string, password: string): Promise<{ mfaToken: string } | null>;
+  verifyMfa(mfaToken: string, code: string): Promise<void>;
+  completeSession(session: SessionResponse): void;
+  logout(): Promise<void>;
+  setUser(user: User): void;
+  reloadStatus(): Promise<void>;
+}
+
+const AuthContext = createContext<AuthState | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState<AuthStatus | null>(null);
+  const [statusError, setStatusError] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  const reloadStatus = useCallback(async () => {
+    setReady(false);
+    try {
+      const s = await api<AuthStatus>('/auth/status');
+      setStatus(s);
+      setStatusError(false);
+      if (!s.setupRequired) {
+        const session = await refreshSession();
+        setUser(session?.user ?? null);
+      }
+    } catch {
+      setStatusError(true);
+    } finally {
+      setReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reloadStatus();
+    return onSessionChange((session) => {
+      if (session) setUser(session.user);
+      else {
+        setUser(null);
+        queryClient.clear();
+      }
+    });
+  }, [reloadStatus, queryClient]);
+
+  const completeSession = useCallback((session: SessionResponse) => {
+    setSession(session);
+    setStatus((s) => (s ? { ...s, setupRequired: false } : s));
+  }, []);
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const res = await api<LoginResponse>('/auth/login', { method: 'POST', body: { email, password } });
+      if ('mfaRequired' in res) return { mfaToken: res.mfaToken };
+      completeSession(res);
+      return null;
+    },
+    [completeSession],
+  );
+
+  const verifyMfa = useCallback(
+    async (mfaToken: string, code: string) => {
+      completeSession(await api<SessionResponse>('/auth/mfa/verify', { method: 'POST', body: { mfaToken, code } }));
+    },
+    [completeSession],
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } finally {
+      setSession(null);
+    }
+  }, []);
+
+  const value = useMemo<AuthState>(
+    () => ({ ready, status, statusError, user, login, verifyMfa, completeSession, logout, setUser, reloadStatus }),
+    [ready, status, statusError, user, login, verifyMfa, completeSession, logout, reloadStatus],
+  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+  return ctx;
+}
