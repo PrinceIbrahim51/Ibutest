@@ -116,7 +116,7 @@ jobs:
       - name: Desktop end-to-end
         run: xvfb-run -a npm run test:e2e:desktop
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-output
           path: |
