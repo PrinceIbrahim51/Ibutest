@@ -13,11 +13,11 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@electric-sql/pglite": "0.5.13",
+    "@electric-sql/pglite": "0.5.16",
     "@node-rs/argon2": "2.2.2"
   },
   "devDependencies": {
-    "electron": "45.1.0",
+    "electron": "45.2.3",
     "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
     "@types/node": "26.6.6"
